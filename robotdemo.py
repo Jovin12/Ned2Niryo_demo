@@ -3,17 +3,38 @@
 # Test FQC V1.4
 
 import json
+
 import subprocess
+    # allowing for multi threadin with separate memory for each thread
+
 from datetime import datetime
 
 import numpy as np
+
 import psutil
+    # library of useful funcitons, doesnt have particular purpose but has useful functions
+
 import requests
+        # simple python HTTP library, allowing to send HTTP/1.1 requests. With no need to add query strings to URLs
+
+# In order to control Ned more easily than calling ecah sevice, a python ros wrpper has to be build
 from niryo_robot_python_ros_wrapper.ros_wrapper import NiryoRosWrapper, NiryoRosWrapperException
+                    # ros_wrapper is an api of the python ros wrapper for Ned2,
+                    # this provides functionalities such as Moving, using vision controlling conveyeors
+                            # NiryoRosWrapper is a class in the API, which has methods to provide these functionalities
+
 from niryo_robot_python_ros_wrapper.ros_wrapper_enums import ButtonAction
+                    # ros_wrapper_enums is just a file with enums that has the pin numbers of the ned2
+                        # and button action, is the class with class variables with the values to perform actions like Hold, long push, single push
+
 
 import rospy
+        # python client(local) library for ros
+        # creates a high level interfact with ROS
+
 from niryo_robot_database.srv import SetSettings
+
+        # the niryo robot runs on raspberry pi, 
 from niryo_robot_rpi.srv import LedBlinker, LedBlinkerRequest
 from niryo_robot_rpi.srv import ScanI2CBus
 from std_msgs.msg import String, Int32
@@ -24,7 +45,8 @@ CALIBRATION_LOOPS = 1
 SPIRAL_LOOPS = 1
 HIGH_SPEED_LOOP = 10
 NB_HOURS = 5
-FULL = 0
+FULL = 0        # set to 0 by default for the TESTPRODUCTION class initialization
+                # this is for the demo only part of the program, so it runns only the demo functions
 
 SPEED = 100  # %
 ACCELERATION = 100  # %
@@ -42,6 +64,8 @@ PINK = [255, 0, 255]
 RED = [255, 0, 0]
 YELLOW = [255, 255, 0]
 
+
+# variables refereing to the minimum(m) and Maximum(M) values for the joings 1,2,3,4,5,6
 j_limit_1m, j_limit_1M, j_limit_2m, j_limit_2M = np.deg2rad(-164), np.deg2rad(164), np.deg2rad(-90), np.deg2rad(31)
 j_limit_3m, j_limit_3M, j_limit_4m, j_limit_4M = np.deg2rad(-74), np.deg2rad(86), np.deg2rad(-116), np.deg2rad(116)
 j_limit_5m, j_limit_5M, j_limit_6m, j_limit_6M = np.deg2rad(-105), np.deg2rad(105), np.deg2rad(-144), np.deg2rad(144)
@@ -140,6 +164,7 @@ class TestProduction:  # Here we create the program who contain each function th
 
     def __init__(self):
         self.__functions = TestFunctions()
+                                # makes a call to the Test Functions wihtin this file
         self.__success = False
 
         if FULL == 1:  # For the short test (freemotion and button)
@@ -167,9 +192,14 @@ class TestProduction:  # Here we create the program who contain each function th
                 TestStep(self.__functions.test_long, "Long test", critical=True),
                 TestStep(self.__functions.end_test, "Test final check", critical=True)
             ]
+
+
         if FULL == 0:  # For the demo (only button) and also default mode
             self.__sub_tests = [
+                    # as FULL is 0, self.__functions.name returns = ["Programme demo", "Debut du test court FQC", "Debut du test long FQC","Test avant expedission"]
                 TestStep(self.__functions.name, "Program name", critical=True),
+
+                    # test calibration, gets a report of the name Testcalibration, whic allows it to calibrate
                 TestStep(self.__functions.test_calibration, "Test calibration", critical=True),
                 TestStep(self.__functions.test_spiral, "Test spiral", critical=True),
                 TestStep(self.__functions.test_joint_limits, "Test joint limits", critical=True),
@@ -375,13 +405,20 @@ class TestFunctions(object):  # definition of each function (some are unused)
         if self.__hardware_version in ['ned2', 'ned3']:
             test_i2c()
 
+
+            # before this when Test Step is run, the report specific to this method is saved there allowing for the right value of Test Report class to work
     def test_calibration(self, report):
         for i in range(CALIBRATION_LOOPS):
 
+            # self.__robot has been set to ROSWrapper as its a global variable,
+            # so request_new_calibration is a method within NiryoRosWrapper()
             self.__robot.request_new_calibration()
             rospy.sleep(0.1)
+            
             report.execute(self.__robot.calibrate_auto, "Calibration")
             self.__robot.set_learning_mode(False)
+            # the robot is no longer going to be learning
+
             rospy.sleep(0.1)
             report.execute(self.move_and_compare, "Move after calibration", args=[6 * [0], 1])
 
@@ -866,9 +903,22 @@ class TestFunctions(object):  # definition of each function (some are unused)
 
 if __name__ == '__main__':
     rospy.init_node('niryo_test_FQC_ros_wrapper')
-    robot = NiryoRosWrapper()
+            #initializes a ROS node within the ROS application.
+            # node - fundamental unit of computation, to perfomr specific tasks
+                    # each node is a separate process performing a specific task running on the system
+                    # think aobut using vision data while simultaneously working with the robot
+            # name should be unique to account for conflicts within the ROS network
+            # this registers itsself as a node in ROS master a central server that manages the network of Nodes
+                # argumenst:
+                # anonymous = True; auto gen a unique name
 
+    # this robot is a globally available variable
+    robot = NiryoRosWrapper()
+        # just creating an instance of the NiryoRosWrapper class
+
+        # return true/false to get if in learning mode
     if robot.get_learning_mode() or robot.custom_button.is_pressed():  # detect in which mode we are
+                                    # return true/False if custom button is pressed
 
         if robot.get_learning_mode() and robot.custom_button.is_pressed():
             LOOPS = 5
@@ -904,6 +954,7 @@ if __name__ == '__main__':
 
         print("----- START -----")
         test = TestProduction()
+                # call to a class within this(current) file robotdemo.py
         prog = test.run()
         print("----- END -----")
 
