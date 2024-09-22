@@ -107,6 +107,9 @@ class TestReport(object):  # We define the report to send to RFM
     def execute(self, function, prefix, args=None, ret=False):  # Execute a function and create a report of the latter
         try:
             status, message = function() if args is None else function(*args)
+                                                            # this *args makes it so that 
+                                                            # the elements in the list are separate variables on their own
+                                                            # and not a single variable as a list
         except Exception as e:
             self.append("{}{} - {}".format(prefix, " failed" if prefix else "Failed", str(e)))
             raise TestFailure(e)
@@ -193,18 +196,48 @@ class TestProduction:  # Here we create the program who contain each function th
                 TestStep(self.__functions.end_test, "Test final check", critical=True)
             ]
 
+        # Step 3: Here Test production goes through the set of test functions for the test.run() in main
+        # here we go through what each method does
+        # Step 4 is in line 206      
+
 
         if FULL == 0:  # For the demo (only button) and also default mode
             self.__sub_tests = [
                     # as FULL is 0, self.__functions.name returns = ["Programme demo", "Debut du test court FQC", "Debut du test long FQC","Test avant expedission"]
                 TestStep(self.__functions.name, "Program name", critical=True),
+                # Step 4: This initializes the values to TestStep(), 
+                # the testStep() is necessary as it initializes values that make methods like report.execute() funciton properly
+                # with the function call and the name of the report for that call ( you see this in lines 287-295)
+                # With critical being true, focus on this process.
+                # Step 5 : line 320
+
 
                     # test calibration, gets a report of the name Testcalibration, whic allows it to calibrate
                 TestStep(self.__functions.test_calibration, "Test calibration", critical=True),
+                # Step 6: This initializes the values to TestStep() like before. 
+                # And makes a call to the test_calibration function
+                # Step 7: Line 430
+
                 TestStep(self.__functions.test_spiral, "Test spiral", critical=True),
+                # Step 8: Initialize to TestStep() for proper execution of report.execute()
+                # report.execute() makes a call to test_spiral
+
                 TestStep(self.__functions.test_joint_limits, "Test joint limits", critical=True),
+                # Step 11: same thing, making call to report.execute() which calls tst_joint_limits()
+                # Step 12: Line 641
+
+                # does the same thing as test_fun_joints
                 TestStep(self.__functions.test_fun_poses, "Test poses", critical=True),
+                # Step 13: same thing, making call to report.execute() which callstest_fun_poses
+                # Step 14: Line 696
+
+                # Go to the method or read through the read me
                 TestStep(self.__functions.test_pick_and_place, "Test pick and place", critical=True),
+                # Step 15: This is the end of the execution basically, 
+                # its just that I already have this copy pasted in the README.md file
+                # if you understood how the execution up until test_joints or even test_fun_poses work 
+                # you should be able to understand this as well. 
+
                 TestStep(self.__functions.end_test, "Test final check", critical=True)
             ]
         if FULL == 3:  # Expedition test
@@ -301,7 +334,8 @@ class TestFunctions(object):  # definition of each function (some are unused)
                        shell=True,
                        stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL)
-
+    # Step 5: This does absolutely nothing important but set a volume, but is a step for the execution of the program    
+    # Step 6: Line 213
     def name(self, report):
         if FULL != 0:
             report.execute(self.__robot.sound.set_volume, "Set volume", [VOLUME])
@@ -405,6 +439,10 @@ class TestFunctions(object):  # definition of each function (some are unused)
         if self.__hardware_version in ['ned2', 'ned3']:
             test_i2c()
 
+        # Step 7: First method that does something
+        # Which makes a call to move_and_compare in Line 912
+        # which based on the given arguments 6*[0],1 sets all the joints to 0 and compares if they are
+        # Step 8: Line 219
 
             # before this when Test Step is run, the report specific to this method is saved there allowing for the right value of Test Report class to work
     def test_calibration(self, report):
@@ -605,6 +643,11 @@ class TestFunctions(object):  # definition of each function (some are unused)
         for ai in aio.analog_inputs:
             report.execute(test_analog_io_value, 'Test analog input {} is 0V'.format(ai.name), [ai.name, 0.0])
 
+    # Step 12: This method is something to test out
+    # again dont know the difference between move joints and move pose
+    # this method makes a call to move_and_compare which is more joints.
+    # Step 13: Line 231
+
     def test_joint_limits(self, report):
         if self.__hardware_version in ['ned2', 'ned3']:
             self.__robot.led_ring.rainbow_cycle()
@@ -613,17 +656,17 @@ class TestFunctions(object):  # definition of each function (some are unused)
         self.__robot.set_learning_mode(False)
         rospy.sleep(1)
 
+        # default is set to 0
         default_joint_pose = 6 * [0.0]
 
+        #targets created are empty lists of arrays of size 6
         first_target, second_target, third_target, last_target = 6 * [0], 6 * [0], 6 * [0], 6 * [0]
 
-        first_target[0], first_target[3], first_target[4], first_target[
-            5] = j_limit_1m, j_limit_4m, j_limit_5m, j_limit_6m
+        first_target[0], first_target[3], first_target[4], first_target[5] = j_limit_1m, j_limit_4m, j_limit_5m, j_limit_6m
 
         second_target[1], second_target[2] = j_limit_2M, j_limit_3m
 
-        third_target[0], third_target[3], third_target[4], third_target[
-            5] = j_limit_1M, j_limit_4M, j_limit_5M, j_limit_6M
+        third_target[0], third_target[3], third_target[4], third_target[5] = j_limit_1M, j_limit_4M, j_limit_5M, j_limit_6M
 
         last_target[2], last_target[4] = j_limit_3M, j_limit_5m
 
@@ -637,6 +680,13 @@ class TestFunctions(object):  # definition of each function (some are unused)
                                "Move number {}.{}".format(loop_index, position_index),
                                args=[joint_position, precision, duration])
 
+    # Step 9: This step is something taht I wanna test out, 
+    # cuz it moves the pose to and from a particular point
+    # but I am not sure if it moves around or back and forth
+    # This function is similar tot he test calibration which moves joints, 
+    # but just uses the pose
+    # Step 10: Line 226
+
     def test_spiral(self, report):
         if self.__hardware_version in ['ned2', 'ned3']:
             self.__robot.led_ring.rainbow_cycle()
@@ -646,7 +696,10 @@ class TestFunctions(object):  # definition of each function (some are unused)
             report.execute(self.__robot.move_pose,
                            "Loop {} - Move to spiral center".format(loop_index), [0.3, 0, 0.2, 0, 1.57, 0])
             report.execute(self.__robot.move_spiral, "Loop {} - Execute spiral".format(loop_index), [0.15, 5, 216, 3])
-
+    # Step 14: This is the method that cycles through different poses for the arm to move. 
+    # this step makes me think that the poses are just the arm macro movement, 
+    # while the joints are for precise micro movements
+    # Step 15: Line 236
     def test_fun_poses(self, report):
         if self.__hardware_version in ['ned2', 'ned3']:
             self.__robot.led_ring.rainbow_cycle()
@@ -663,6 +716,7 @@ class TestFunctions(object):  # definition of each function (some are unused)
                                args=[wayoint, 1, 4])
 
     def test_pick_and_place(self, report):
+        # move the joints to the 0th position
         report.execute(self.move_and_compare, "Move to 0.0", args=[6 * [0], 1])
 
         if self.__hardware_version in ['ned2', 'ned3']:
@@ -672,6 +726,8 @@ class TestFunctions(object):  # definition of each function (some are unused)
             self.__robot.led_ring.solid(YELLOW)
             # self.say("Test de pick and place")
 
+
+            # I believe the update_tool, is scanning to see there is a grasp hand
         report.execute(self.__robot.update_tool, "Scan tool")
         report.append("Detected tool: {}".format(self.__robot.get_current_tool_id()))
 
@@ -903,6 +959,9 @@ class TestFunctions(object):  # definition of each function (some are unused)
 
 if __name__ == '__main__':
     rospy.init_node('niryo_test_FQC_ros_wrapper')
+    # START OF PROGRAM EXECUTION --------------------------------
+    # Step 1:
+        # BEFORE YOU START it is imparitive that you know how the report.execute() funciton works Line 107.
             #initializes a ROS node within the ROS application.
             # node - fundamental unit of computation, to perfomr specific tasks
                     # each node is a separate process performing a specific task running on the system
@@ -912,7 +971,7 @@ if __name__ == '__main__':
                 # argumenst:
                 # anonymous = True; auto gen a unique name
 
-    # this robot is a globally available variable
+    # this robot is a globally available variable, hence can be used by other classses
     robot = NiryoRosWrapper()
         # just creating an instance of the NiryoRosWrapper class
 
@@ -952,6 +1011,11 @@ if __name__ == '__main__':
 
         robot.sound.play('ready.wav')
 
+        # STEP 2: of the execution
+        # This is where the initialization is done
+        # this calls Production, where production sets the values of the tests to run dependin on the value of FULL
+        # FULL = 0, which is at the start of this file
+        # Go to line 195 for step 3
         print("----- START -----")
         test = TestProduction()
                 # call to a class within this(current) file robotdemo.py
